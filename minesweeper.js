@@ -130,8 +130,11 @@ Board.prototype.won = function () {
       }
     });
   });
-  console.log("unexplored: " + unexplored + "\nnumBombs: " + this.numBombs);
   return (won && unexplored === 0) || (unexplored === this.numBombs && !this.lost());
+};
+
+Board.prototype.gameOver = function () {
+  return (this.lost() || this.won());
 };
 
 module.exports = {

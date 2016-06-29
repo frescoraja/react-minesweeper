@@ -19,7 +19,6 @@ const Board = React.createClass({
       return (
         <Tile
           tile={tile}
-          onClick={this.props.startGame}
           updateGame={this.props.updateGame}
           key={i * board.gridSize + j} />
       );

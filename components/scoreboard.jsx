@@ -1,25 +1,47 @@
 import React from 'react';
-import Timer from './timer';
-import ScoreList from './scorelist';
+import ScoreStore from '../stores/score_store';
 
 const ScoreBoard = React.createClass({
   getInitialState: function() {
-    return { scores: [] };
+    return { scores: ScoreStore.all() };
+  },
+
+  componentDidMount: function() {
+    ScoreStore.addChangeHandler(this.handleNewScore);
+  },
+
+  handleNewScore: function() {
+    this.setState({ scores: ScoreStore.all() });
+  },
+
+  renderScores: function() {
+    const scores = this.state.scores;
+    return (
+      scores.map((score, idx) => {
+        const classname = (score.won ? "won" : "lost");
+        return (
+          <tr><td key={idx} className={classname}>{score.score}</td></tr>
+        );
+      })
+    );
   },
 
   render: function() {
     return (
-      <div className="scoreboard">
-        <ScoreList
-          scores={this.state.scores}
-          updateScore={this.updateScore} />
-      </div>
+      <table className="scorelist">
+      <tbody>
+        <tr><th>Scores:</th></tr>
+          {
+            this.state.scores.map((score, idx) => {
+              const classname = (score.won ? "won" : "lost" );
+              return (
+                <tr key={idx}><td className={classname}>{score.score}</td></tr>
+              );
+            })
+          }
+          </tbody>
+      </table>
     );
-  },
-
-  updateScores: function(score) {
-    const scores = this.state.scores;
-    this.setState({ scores: scores.concat([score]) });
   }
 });
 

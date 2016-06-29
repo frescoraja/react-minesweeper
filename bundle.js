@@ -20379,13 +20379,17 @@
 	
 	var _board2 = _interopRequireDefault(_board);
 	
-	var _timer = __webpack_require__(173);
+	var _timer = __webpack_require__(172);
 	
 	var _timer2 = _interopRequireDefault(_timer);
 	
-	var _scoreboard = __webpack_require__(172);
+	var _scoreboard = __webpack_require__(174);
 	
 	var _scoreboard2 = _interopRequireDefault(_scoreboard);
+	
+	var _score_store = __webpack_require__(173);
+	
+	var _score_store2 = _interopRequireDefault(_score_store);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -20394,13 +20398,12 @@
 	
 	  getInitialState: function getInitialState() {
 	    var board = new _minesweeper2.default.Board(9, 10);
-	    return { board: board,
-	      playing: false };
+	    return { board: board, playing: false };
 	  },
 	
 	  render: function render() {
 	    var modal = void 0;
-	    if (this.state.board.lost() || this.state.board.won()) {
+	    if (this.state.board.gameOver()) {
 	      var text = this.state.board.won() ? 'You win!' : 'You lost!';
 	      modal = _react2.default.createElement(
 	        'div',
@@ -20426,7 +20429,8 @@
 	        )
 	      );
 	    }
-	
+	    console.log("rendered board");
+	    window.board = this.state.board;
 	    return _react2.default.createElement(
 	      'div',
 	      {
@@ -20437,7 +20441,7 @@
 	        board: this.state.board,
 	        updateGame: this.updateGame, __self: this
 	      }),
-	      _react2.default.createElement(_timer2.default, { boardState: this.state.playing, __self: this
+	      _react2.default.createElement(_timer2.default, { ref: 'timer', board: this.state.board, playing: this.state.playing, __self: this
 	      }),
 	      _react2.default.createElement(_scoreboard2.default, {
 	        __self: this
@@ -20446,9 +20450,7 @@
 	  },
 	
 	  restartGame: function restartGame() {
-	    var board = new _minesweeper2.default.Board(9, 10);
-	    this.setState({ board: board,
-	      playing: false });
+	    this.setState({ board: new _minesweeper2.default.Board(9, 10), playing: false });
 	  },
 	
 	  updateGame: function updateGame(tile, flagged) {
@@ -20457,7 +20459,10 @@
 	    } else {
 	      tile.explore();
 	    }
-	    if (this.state.board.won() || this.state.board.lost()) {
+	    if (this.state.board.gameOver()) {
+	      var score = { score: this.refs.timer.state.time, won: this.state.board.won() };
+	      console.log(score);
+	      _score_store2.default.addScore(score);
 	      this.setState({ board: this.state.board, playing: false });
 	    } else {
 	      this.setState({ board: this.state.board, playing: true });
@@ -20600,8 +20605,11 @@
 	      }
 	    });
 	  });
-	  console.log("unexplored: " + unexplored + "\nnumBombs: " + this.numBombs);
 	  return won && unexplored === 0 || unexplored === this.numBombs && !this.lost();
+	};
+	
+	Board.prototype.gameOver = function () {
+	  return this.lost() || this.won();
 	};
 	
 	module.exports = {
@@ -20653,7 +20661,6 @@
 	    return row.map(function (tile, j) {
 	      return _react2.default.createElement(_tile2.default, {
 	        tile: tile,
-	        onClick: _this2.props.startGame,
 	        updateGame: _this2.props.updateGame,
 	        key: i * board.gridSize + j, __self: _this2
 	      });
@@ -20745,67 +20752,21 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _timer = __webpack_require__(173);
+	var _score_store = __webpack_require__(173);
 	
-	var _timer2 = _interopRequireDefault(_timer);
-	
-	var _scorelist = __webpack_require__(174);
-	
-	var _scorelist2 = _interopRequireDefault(_scorelist);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var ScoreBoard = _react2.default.createClass({
-	  displayName: 'ScoreBoard',
-	
-	  getInitialState: function getInitialState() {
-	    return { scores: [] };
-	  },
-	
-	  render: function render() {
-	    return _react2.default.createElement(
-	      'div',
-	      { className: 'scoreboard', __self: this
-	      },
-	      _react2.default.createElement(_scorelist2.default, {
-	        scores: this.state.scores,
-	        updateScore: this.updateScore, __self: this
-	      })
-	    );
-	  },
-	
-	  updateScores: function updateScores(score) {
-	    var scores = this.state.scores;
-	    this.setState({ scores: scores.concat([score]) });
-	  }
-	});
-	
-	exports.default = ScoreBoard;
-
-/***/ },
-/* 173 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(1);
-	
-	var _react2 = _interopRequireDefault(_react);
+	var _score_store2 = _interopRequireDefault(_score_store);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var Timer = _react2.default.createClass({
-	  displayName: "Timer",
+	  displayName: 'Timer',
 	
 	  getInitialState: function getInitialState() {
 	    return { time: 0 };
 	  },
 	
 	  componentDidMount: function componentDidMount() {
+	    _score_store2.default.addChangeHandler(this.restartTimer);
 	    this.timer = setInterval(this.tick, 1000);
 	  },
 	
@@ -20813,24 +20774,27 @@
 	    clearInterval(this.timer);
 	  },
 	
+	  restartTimer: function restartTimer() {
+	    this.setState({ time: 0 });
+	  },
+	
 	  render: function render() {
 	    return _react2.default.createElement(
-	      "div",
-	      { className: "timer", __self: this
+	      'div',
+	      { className: 'timer', __self: this
 	      },
 	      _react2.default.createElement(
-	        "h1",
-	        { className: "time", __self: this
+	        'h1',
+	        { className: 'time', __self: this
 	        },
-	        "Time: ",
+	        'Time: ',
 	        this.state.time
 	      )
 	    );
 	  },
 	
 	  tick: function tick() {
-	    var playing = this.props.boardState;
-	    if (playing) {
+	    if (this.props.playing) {
 	      this.setState({ time: this.state.time + 1 });
 	    }
 	  }
@@ -20839,10 +20803,45 @@
 	exports.default = Timer;
 
 /***/ },
+/* 173 */
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	var _scores = [],
+	    _callbacks = [];
+	
+	var ScoreStore = {
+	  all: function all() {
+	    return _scores.slice();
+	  },
+	  addChangeHandler: function addChangeHandler(callback) {
+	    _callbacks.push(callback);
+	  },
+	  removeChangeHandler: function removeChangeHandler(callback) {
+	    _callbacks.splice(_callbacks.indexOf(callback), 1);
+	  },
+	  changed: function changed() {
+	    for (var i = 0; i < _callbacks.length; i++) {
+	      _callbacks[i]();
+	    }
+	  },
+	  addScore: function addScore(score) {
+	    _scores = _scores.concat([score]);
+	    this.changed();
+	  }
+	};
+	
+	exports.default = ScoreStore;
+
+/***/ },
 /* 174 */
 /***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
+	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
@@ -20852,61 +20851,93 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
+	var _score_store = __webpack_require__(173);
+	
+	var _score_store2 = _interopRequireDefault(_score_store);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var ScoreList = _react2.default.createClass({
-	  displayName: "ScoreList",
+	var ScoreBoard = _react2.default.createClass({
+	  displayName: 'ScoreBoard',
+	
+	  getInitialState: function getInitialState() {
+	    return { scores: _score_store2.default.all() };
+	  },
+	
+	  componentDidMount: function componentDidMount() {
+	    _score_store2.default.addChangeHandler(this.handleNewScore);
+	  },
+	
+	  handleNewScore: function handleNewScore() {
+	    this.setState({ scores: _score_store2.default.all() });
+	  },
 	
 	  renderScores: function renderScores() {
 	    var _this = this;
 	
-	    var scores = this.prop.scores;
+	    var scores = this.state.scores;
 	    return scores.map(function (score, idx) {
+	      var classname = score.won ? "won" : "lost";
 	      return _react2.default.createElement(
-	        "tr",
+	        'tr',
 	        {
 	          __self: _this
 	        },
 	        _react2.default.createElement(
-	          "td",
-	          { key: idx, __self: _this
+	          'td',
+	          { key: idx, className: classname, __self: _this
 	          },
-	          score
+	          score.score
 	        )
 	      );
 	    });
 	  },
 	
 	  render: function render() {
+	    var _this2 = this;
+	
 	    return _react2.default.createElement(
-	      "table",
-	      { className: "scorelist", __self: this
+	      'table',
+	      { className: 'scorelist', __self: this
 	      },
 	      _react2.default.createElement(
-	        "tbody",
+	        'tbody',
 	        {
 	          __self: this
 	        },
 	        _react2.default.createElement(
-	          "tr",
+	          'tr',
 	          {
 	            __self: this
 	          },
 	          _react2.default.createElement(
-	            "th",
+	            'th',
 	            {
 	              __self: this
 	            },
-	            "Scores:"
+	            'Scores:'
 	          )
 	        ),
-	        this.renderScores
+	        this.state.scores.map(function (score, idx) {
+	          var classname = score.won ? "won" : "lost";
+	          return _react2.default.createElement(
+	            'tr',
+	            { key: idx, __self: _this2
+	            },
+	            _react2.default.createElement(
+	              'td',
+	              { className: classname, __self: _this2
+	              },
+	              score.score
+	            )
+	          );
+	        })
 	      )
 	    );
 	  }
 	});
 	
-	exports.default = ScoreList;
+	exports.default = ScoreBoard;
 
 /***/ }
 /******/ ]);

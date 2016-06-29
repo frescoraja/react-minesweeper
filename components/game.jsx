@@ -3,17 +3,17 @@ import Minesweeper from '../minesweeper';
 import Board from './board';
 import Timer from './timer';
 import ScoreBoard from './scoreboard';
+import ScoreStore from '../stores/score_store';
 
 const Game = React.createClass({
   getInitialState: function() {
     const board = new Minesweeper.Board(9, 10);
-    return { board: board,
-             playing: false };
+    return { board: board, playing: false };
   },
 
   render: function() {
     let modal;
-    if (this.state.board.lost() || this.state.board.won()) {
+    if (this.state.board.gameOver()) {
       const text = this.state.board.won() ? `You win!` : `You lost!`;
       modal =
         (<div className="modal-screen">
@@ -23,23 +23,22 @@ const Game = React.createClass({
          </div>
          </div>);
     }
-
+    console.log("rendered board");
+    window.board = this.state.board;
     return (
       <div>
         {modal}
         <Board
           board={this.state.board}
           updateGame={this.updateGame} />
-        <Timer boardState={this.state.playing} />
+        <Timer ref="timer" board={this.state.board} playing={this.state.playing} />
         <ScoreBoard />
       </div>
     );  
   },
 
   restartGame: function() {
-    const board = new Minesweeper.Board(9, 10);
-    this.setState({ board: board,
-                    playing: false });
+    this.setState({ board: new Minesweeper.Board(9, 10), playing: false });
   },
 
   updateGame: function(tile, flagged) {
@@ -48,7 +47,10 @@ const Game = React.createClass({
     } else {
       tile.explore();
     }
-    if (this.state.board.won() || this.state.board.lost()) {
+    if (this.state.board.gameOver()) {
+      const score = { score: this.refs.timer.state.time, won: this.state.board.won() };
+      console.log(score);
+      ScoreStore.addScore(score);
       this.setState({ board: this.state.board, playing: false });
     } else {
       this.setState({ board: this.state.board, playing: true }); 
